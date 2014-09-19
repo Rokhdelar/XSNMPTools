@@ -1,0 +1,84 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingLeft="@dimen/activity_horizontal_margin"
+    android:paddingRight="@dimen/activity_horizontal_margin"
+    android:paddingTop="@dimen/activity_vertical_margin"
+    android:paddingBottom="@dimen/activity_vertical_margin"
+    tools:context="com.x.xsnmp.DeviceActivity">
+
+
+    <TextView
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/tip_for_substation"
+        android:id="@+id/textViewSubStation"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentStart="true" />
+    <Spinner
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/spinnerSubstation"
+        android:layout_below="@+id/textViewSubStation"
+        android:layout_alignParentStart="true"
+        android:spinnerMode="dialog"/>
+
+    <TextView
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/tip_for_commroom"
+        android:id="@+id/textViewCommRoom"
+        android:layout_below="@id/spinnerSubstation"/>
+    <Spinner
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/spinnerCommRooms"
+        android:layout_below="@+id/textViewCommRoom"
+        android:layout_alignParentStart="true"
+        android:spinnerMode="dialog"/>
+
+    <TextView
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/tip_for_device"
+        android:id="@+id/textViewDevice"
+        android:layout_below="@id/spinnerCommRooms"/>
+    <Spinner
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/spinnerDevices"
+        android:layout_below="@+id/textViewDevice"
+        android:layout_alignParentStart="true"
+        android:spinnerMode="dialog"/>
+
+    <TextView
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/spinnerDevices"
+        android:id="@+id/tip_for_DeviceInfo"
+        android:text="@string/tip_for_deviceinfo"/>
+
+    <Spinner
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/spinnerInterfaces"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentStart="true"
+        android:spinnerMode="dialog"/>
+    <TextView
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/tip_for_interface"
+        android:id="@+id/textViewInterfaces"
+        android:layout_above="@id/spinnerInterfaces"/>
+
+    <TextView
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:id="@+id/textViewDeviceInfo"
+        android:layout_below="@id/tip_for_DeviceInfo"
+        android:layout_above="@id/textViewInterfaces"
+        android:textSize="12sp"
+        android:textColor="@android:color/holo_blue_light" />
+</RelativeLayout>

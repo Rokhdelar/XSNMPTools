@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">X SNMP Tools</string>
+    <string name="action_settings">Settings</string>
+    <string name="function_device">设备实时状态查看</string>
+    <string name="function_device_detail">查看设备信息、端口状态、光功率测试等功能...</string>
+    <string name="function_device_setting">设备管理信息维护</string>
+    <string name="function_device_setting_detail">维护设备的通信信息，IP地址、SNMP读写串等...</string>
+    <string name="function_setting">应用设置...</string>
+    <string name="function_setting_detail">本APP的对端服务器等相关信息设置...</string>
+    <string name="title_activity_device_info">设备实时状态查询</string>
+    <string name="hello_world">Hello world!</string>
+    <string name="tip_for_substation">请选择您要查看的设备所属的支局：</string>
+    <string name="tip_for_commroom">请选择您要查看的设备所属的机房：</string>
+    <string name="tip_for_device">请选择您要查看的设备：</string>
+    <string name="tip_for_interface">请选择您要查看的接口：</string>
+    <string name="tip_for_deviceinfo">您选择的设备SNMP实时信息如下：</string>
+    <string name="title_activity_device">设备信息</string>
+
+</resources>
