@@ -1,6 +1,7 @@
 package com.x.xsnmp;
 
 import android.app.Activity;
+import android.app.ProgressDialog;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -33,7 +34,7 @@ public class DeviceActivity extends Activity {
     private NetThread netThread;
     private ObjectInputStream objectInputStream;
     private ObjectOutputStream objectOutputStream;
-
+    private ProgressDialog progressDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,15 +56,15 @@ public class DeviceActivity extends Activity {
                 switch (msg.what)
                 {
                     case Cmd.GET_SUBSTATIONS:
-                        Log.d("TAG", "getSubStation");
+                        progressDialog=ProgressDialog.show(getApplicationContext(),"Loading...","正在加载数据，请等待...");
                         ArrayAdapter<SubStation> arrayAdapter=new ArrayAdapter<SubStation>(getApplicationContext(),android.R.layout.simple_spinner_item,(List<SubStation>)msg.obj);
                         subSpinner.setAdapter(arrayAdapter);
                         subSpinner.setPrompt("请选择设备所属的支局");
                         subSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
                             @Override
                             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                                SubStation subStation=(SubStation)parent.getSelectedItem();
-                                netThread.mChildHandler.obtainMessage(Cmd.GET_COMMROOMS,subStation.subID,-1).sendToTarget();
+                                SubStation subStation = (SubStation) parent.getSelectedItem();
+                                netThread.mChildHandler.obtainMessage(Cmd.GET_COMMROOMS, subStation.subID, -1).sendToTarget();
                             }
 
                             @Override
@@ -71,8 +72,10 @@ public class DeviceActivity extends Activity {
 
                             }
                         });
+                        progressDialog.dismiss();
                         break;
                     case Cmd.GET_COMMROOMS:
+                        progressDialog=ProgressDialog.show(getApplicationContext(),"Loading...","正在加载数据，请等待...");
                         ArrayAdapter<CommRoom> commRoomArrayAdapter=new ArrayAdapter<CommRoom>(getApplicationContext(),android.R.layout.simple_spinner_dropdown_item,(List<CommRoom>)msg.obj);
                         comSpinner.setAdapter(commRoomArrayAdapter);
                         comSpinner.setPrompt("请选择设备所属的机房");
@@ -88,8 +91,10 @@ public class DeviceActivity extends Activity {
 
                             }
                         });
+                        progressDialog.dismiss();
                         break;
                     case Cmd.GET_DEVICES:
+                        progressDialog=ProgressDialog.show(getApplicationContext(),"Loading...","正在加载数据，请等待...");
                         ArrayAdapter<WanDevice> wanDeviceArrayAdapter=new ArrayAdapter<WanDevice>(getApplicationContext(),android.R.layout.simple_spinner_dropdown_item,(List<WanDevice>)msg.obj);
                         deviceSpinner.setAdapter(wanDeviceArrayAdapter);
                         deviceSpinner.setPrompt("请选择要查看的设备");
@@ -106,11 +111,15 @@ public class DeviceActivity extends Activity {
 
                             }
                         });
+                        progressDialog.dismiss();
                         break;
                     case Cmd.GET_DEVICEINFO:
+                        progressDialog=ProgressDialog.show(getApplicationContext(),"Loading...","正在加载数据，请等待...");
                         deviceInfoTextView.setText(msg.obj.toString());
+                        progressDialog.dismiss();
                         break;
                     case Cmd.GET_DEVICEINTERFACES:
+                        progressDialog=ProgressDialog.show(getApplicationContext(),"Loading...","正在加载数据，请等待...");
                         ArrayAdapter<DeviceInterface> deviceInterfaceArrayAdapter=new ArrayAdapter<DeviceInterface>(getApplicationContext(),android.R.layout.simple_spinner_dropdown_item,(List<DeviceInterface>)msg.obj);
                         interSpinner.setAdapter(deviceInterfaceArrayAdapter);
                         interSpinner.setPrompt("请选择要查看的端口");
@@ -125,6 +134,8 @@ public class DeviceActivity extends Activity {
 
                             }
                         });
+                        //progressDialog.dismiss();
+                        break;
                 }
 
             }
@@ -136,26 +147,6 @@ public class DeviceActivity extends Activity {
         Cmd cmd=new Cmd(Cmd.GET_SUBSTATIONS,0,"getSubStations");
 
 
-    }
-
-    private List<SubStation> getSubStations() {
-        //获取SubStation信息，并发送消息到主线程。
-        List<SubStation> subStations=new ArrayList<SubStation>();
-
-        Cmd cmd=new Cmd(Cmd.GET_SUBSTATIONS,-1,"getSubStations");
-        try {
-            objectOutputStream.writeObject(cmd);
-            objectOutputStream.flush();
-
-            try {
-                subStations=(List<SubStation>)objectInputStream.readObject();
-            } catch (ClassNotFoundException e) {
-                e.printStackTrace();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return subStations;
     }
 
     @Override
