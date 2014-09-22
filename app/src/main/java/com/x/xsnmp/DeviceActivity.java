@@ -5,7 +5,6 @@ import android.app.ProgressDialog;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -20,10 +19,10 @@ import com.x.model.DeviceInterface;
 import com.x.model.SubStation;
 import com.x.model.WanDevice;
 
-import java.io.IOException;
+import java.io.BufferedInputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.util.ArrayList;
+import java.net.Socket;
 import java.util.List;
 
 
@@ -32,9 +31,10 @@ public class DeviceActivity extends Activity {
     private TextView deviceInfoTextView;
     public Handler mMainHandler;
     private NetThread netThread;
-    private ObjectInputStream objectInputStream;
-    private ObjectOutputStream objectOutputStream;
     private ProgressDialog progressDialog;
+    private String serverIP="61.128.177.2";
+    private int serverPort=8081;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,6 +47,13 @@ public class DeviceActivity extends Activity {
         interSpinner=(Spinner)findViewById(R.id.spinnerInterfaces);
         deviceInfoTextView=(TextView)findViewById(R.id.textViewDeviceInfo);
 
+        progressDialog=new ProgressDialog(DeviceActivity.this);
+        progressDialog.setTitle("Loading...");
+        progressDialog.setMessage("正在载入数据，请稍候...");
+
+        progressDialog.show();
+
+        getSubStations();
 
         mMainHandler=new Handler()
         {
@@ -56,7 +63,6 @@ public class DeviceActivity extends Activity {
                 switch (msg.what)
                 {
                     case Cmd.GET_SUBSTATIONS:
-                        progressDialog=ProgressDialog.show(getApplicationContext(),"","正在载入数据，请稍候...");
                         ArrayAdapter<SubStation> arrayAdapter=new ArrayAdapter<SubStation>(getApplicationContext(),android.R.layout.simple_spinner_item,(List<SubStation>)msg.obj);
                         subSpinner.setAdapter(arrayAdapter);
                         subSpinner.setPrompt("请选择设备所属的支局");
@@ -64,7 +70,8 @@ public class DeviceActivity extends Activity {
                             @Override
                             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                                 SubStation subStation = (SubStation) parent.getSelectedItem();
-                                netThread.mChildHandler.obtainMessage(Cmd.GET_COMMROOMS, subStation.subID, -1).sendToTarget();
+                                progressDialog.show();
+                                getCommRooms(subStation.subID);
                             }
 
                             @Override
@@ -72,7 +79,6 @@ public class DeviceActivity extends Activity {
 
                             }
                         });
-                        progressDialog.dismiss();
                         break;
                     case Cmd.GET_COMMROOMS:
                         progressDialog.show();
@@ -83,7 +89,8 @@ public class DeviceActivity extends Activity {
                             @Override
                             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                                 CommRoom commRoom=(CommRoom)parent.getSelectedItem();
-                                netThread.mChildHandler.obtainMessage(3,commRoom.commRoomID,-1).sendToTarget();
+                                progressDialog.show();
+                                getDevices(commRoom.commRoomID);
                             }
 
                             @Override
@@ -102,8 +109,8 @@ public class DeviceActivity extends Activity {
                             @Override
                             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                                 WanDevice wanDevice=(WanDevice)parent.getSelectedItem();
-                                netThread.mChildHandler.obtainMessage(Cmd.GET_DEVICEINFO,wanDevice.deviceID,-1).sendToTarget();
-                                netThread.mChildHandler.obtainMessage(Cmd.GET_DEVICEINTERFACES,wanDevice.deviceID,-1).sendToTarget();
+//                                netThread.mChildHandler.obtainMessage(Cmd.GET_DEVICEINFO,wanDevice.deviceID,-1).sendToTarget();
+ //                               netThread.mChildHandler.obtainMessage(Cmd.GET_DEVICEINTERFACES,wanDevice.deviceID,-1).sendToTarget();
                             }
 
                             @Override
@@ -141,13 +148,103 @@ public class DeviceActivity extends Activity {
             }
         };
 
-        netThread=new NetThread(mMainHandler);
-        netThread.start();
-
-        Cmd cmd=new Cmd(Cmd.GET_SUBSTATIONS,0,"getSubStations");
+//        netThread=new NetThread(mMainHandler);
+//        netThread.start();
 
 
     }
+
+    private void getCommRooms(final int subID){
+        new Thread(){
+            public void run(){
+                Socket socket;
+                ObjectInputStream objectInputStream;
+                ObjectOutputStream objectOutputStream;
+                List<CommRoom> commRooms;
+                try{
+                    socket=new Socket(serverIP,serverPort);
+                    objectInputStream=new ObjectInputStream(new BufferedInputStream(socket.getInputStream()));
+                    objectOutputStream=new ObjectOutputStream(socket.getOutputStream());
+
+                    Cmd cmd=new Cmd(Cmd.GET_COMMROOMS,subID,"getCommRooms");
+
+                    objectOutputStream.writeObject(cmd);
+                    objectOutputStream.writeObject(null);
+                    commRooms=(List<CommRoom>)objectInputStream.readObject();
+                    mMainHandler.obtainMessage(Cmd.GET_COMMROOMS,commRooms).sendToTarget();
+                    objectInputStream.close();
+                    objectOutputStream.close();
+                    socket.close();
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
+            }
+
+        }.start();
+    }
+
+    private void getDevices(final int commRoomID){
+        new Thread(){
+            public void run(){
+                Socket socket;
+                ObjectInputStream objectInputStream;
+                ObjectOutputStream objectOutputStream;
+                List<WanDevice> wanDevices;
+                try{
+                    socket=new Socket(serverIP,serverPort);
+                    objectInputStream=new ObjectInputStream(new BufferedInputStream(socket.getInputStream()));
+                    objectOutputStream=new ObjectOutputStream(socket.getOutputStream());
+
+                    Cmd cmd=new Cmd(Cmd.GET_DEVICES,commRoomID,"getDevices");
+
+                    objectOutputStream.writeObject(cmd);
+                    objectOutputStream.writeObject(null);
+                    wanDevices=(List<WanDevice>)objectInputStream.readObject();
+
+                    mMainHandler.obtainMessage(Cmd.GET_DEVICES,wanDevices).sendToTarget();
+                    objectInputStream.close();
+                    objectOutputStream.close();
+                    socket.close();
+                }catch (Exception e){
+                    e.printStackTrace();
+                }finally {
+                    progressDialog.dismiss();
+                }
+            }
+        }.start();
+    }
+
+
+    private void getSubStations(){
+       new Thread(){
+           public void run(){
+               Socket socket;
+               ObjectOutputStream objectOutputStream;
+               ObjectInputStream objectInputStream;
+               List<SubStation> subStations;
+               try{
+                   socket=new Socket(serverIP,serverPort);
+                   objectInputStream=new ObjectInputStream(new BufferedInputStream(socket.getInputStream()));
+                   objectOutputStream=new ObjectOutputStream(socket.getOutputStream());
+
+                   Cmd cmd=new Cmd(Cmd.GET_SUBSTATIONS,-1,"getSubStation");
+
+                   objectOutputStream.writeObject(cmd);
+                   objectOutputStream.writeObject(null);
+                   subStations=(List<SubStation>)objectInputStream.readObject();
+
+                   mMainHandler.obtainMessage(Cmd.GET_SUBSTATIONS,subStations).sendToTarget();
+                   objectOutputStream.close();
+                   objectInputStream.close();
+                   socket.close();
+               }catch (Exception e){
+                   e.printStackTrace();
+               }finally {
+                   progressDialog.dismiss();
+               }
+           }
+       }.start();
+   }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
