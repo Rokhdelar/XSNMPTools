@@ -59,26 +59,24 @@
         android:id="@+id/tip_for_DeviceInfo"
         android:text="@string/tip_for_deviceinfo"/>
 
+    <TextView
+        android:layout_width="fill_parent"
+        android:layout_height="80dp"
+        android:id="@+id/textViewDeviceInfo"
+        android:layout_below="@id/tip_for_DeviceInfo"
+        android:textSize="14sp"
+        android:textColor="@android:color/holo_blue_light" />
     <Spinner
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:id="@+id/spinnerInterfaces"
-        android:layout_alignParentBottom="true"
-        android:layout_alignParentStart="true"
+        android:layout_below="@id/textViewInterfaces"
         android:spinnerMode="dialog"/>
     <TextView
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:text="@string/tip_for_interface"
         android:id="@+id/textViewInterfaces"
-        android:layout_above="@id/spinnerInterfaces"/>
+        android:layout_below="@id/textViewDeviceInfo"/>
 
-    <TextView
-        android:layout_width="fill_parent"
-        android:layout_height="fill_parent"
-        android:id="@+id/textViewDeviceInfo"
-        android:layout_below="@id/tip_for_DeviceInfo"
-        android:layout_above="@id/textViewInterfaces"
-        android:textSize="12sp"
-        android:textColor="@android:color/holo_blue_light" />
 </RelativeLayout>
