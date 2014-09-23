@@ -2,14 +2,18 @@ package com.x.xsnmp;
 
 import android.app.Activity;
 import android.app.ProgressDialog;
+import android.content.res.Resources;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.provider.SyncStateContract;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.Spinner;
 import android.widget.TextView;
 
@@ -20,6 +24,7 @@ import com.x.model.SubStation;
 import com.x.model.WanDevice;
 
 import java.io.BufferedInputStream;
+import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
@@ -29,6 +34,8 @@ import java.util.List;
 public class DeviceActivity extends Activity {
     private Spinner subSpinner,comSpinner,deviceSpinner,interSpinner;
     private TextView deviceInfoTextView;
+    private Button btnGetDeviceInterfaces,btnGetInterfaceInfo,btnGetInterfaceOpticalInfo,btnGetInterfaceTraffic;
+    private int currentDeviceID;
     public Handler mMainHandler;
     private NetThread netThread;
     private ProgressDialog progressDialog;
@@ -41,15 +48,31 @@ public class DeviceActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_device);
 
+        getActionBar().setDisplayHomeAsUpEnabled(true);
+
         subSpinner=(Spinner)findViewById(R.id.spinnerSubstation);
         comSpinner=(Spinner)findViewById(R.id.spinnerCommRooms);
         deviceSpinner=(Spinner)findViewById(R.id.spinnerDevices);
         interSpinner=(Spinner)findViewById(R.id.spinnerInterfaces);
         deviceInfoTextView=(TextView)findViewById(R.id.textViewDeviceInfo);
+        btnGetDeviceInterfaces=(Button)findViewById(R.id.btnGetDeviceInterfaces);
+        btnGetInterfaceInfo=(Button)findViewById(R.id.btnGetInterfaceInfo);
+        btnGetInterfaceOpticalInfo=(Button)findViewById(R.id.btnGetInterfaceOpticalInfo);
+        btnGetInterfaceTraffic=(Button)findViewById(R.id.btnGetInterfaceTraffic);
+
+        btnGetDeviceInterfaces.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                WanDevice wanDevice=(WanDevice)deviceSpinner.getSelectedItem();
+                progressDialog.show();
+                getInterfaces((wanDevice.deviceID));
+            }
+        });
 
         progressDialog=new ProgressDialog(DeviceActivity.this);
         progressDialog.setTitle("Loading...");
         progressDialog.setMessage("正在载入数据，请稍候...");
+        progressDialog.setCancelable(false);
 
         progressDialog.show();
 
@@ -111,6 +134,10 @@ public class DeviceActivity extends Activity {
                                 WanDevice wanDevice=(WanDevice)parent.getSelectedItem();
 //                                netThread.mChildHandler.obtainMessage(Cmd.GET_DEVICEINFO,wanDevice.deviceID,-1).sendToTarget();
  //                               netThread.mChildHandler.obtainMessage(Cmd.GET_DEVICEINTERFACES,wanDevice.deviceID,-1).sendToTarget();
+                                progressDialog.show();
+                                //getInterfaces(wanDevice.deviceID);
+                                currentDeviceID=wanDevice.deviceID;
+                                getDeviceInfo(wanDevice.deviceID);
                             }
 
                             @Override
@@ -122,8 +149,17 @@ public class DeviceActivity extends Activity {
                         break;
                     case Cmd.GET_DEVICEINFO:
                         progressDialog.show();
-                        deviceInfoTextView.setText(msg.obj.toString());
-                        progressDialog.dismiss();
+                        List<String> deviceInfo=(List<String>)msg.obj;
+                        if (deviceInfo.size()>1){
+                            deviceInfoTextView.setTextColor(Resources.getSystem().getColor(android.R.color.holo_blue_bright));
+                            deviceInfoTextView.setText("");
+                            deviceInfoTextView.append("设备主机名称：\t"+deviceInfo.get(0)+"\n");
+                            deviceInfoTextView.append("设备运行时间：\t"+deviceInfo.get(1)+"\n");
+                        }else{
+                            deviceInfoTextView.setTextColor(Color.RED);
+                            deviceInfoTextView.setText(deviceInfo.get(0));
+                        }
+
                         break;
                     case Cmd.GET_DEVICEINTERFACES:
                         progressDialog.show();
@@ -133,7 +169,9 @@ public class DeviceActivity extends Activity {
                         interSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
                             @Override
                             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-
+                                btnGetInterfaceInfo.setEnabled(true);
+                                btnGetInterfaceOpticalInfo.setEnabled(true);
+                                btnGetInterfaceTraffic.setEnabled(true);
                             }
 
                             @Override
@@ -147,11 +185,66 @@ public class DeviceActivity extends Activity {
 
             }
         };
+    }
 
-//        netThread=new NetThread(mMainHandler);
-//        netThread.start();
+    private  void getDeviceInfo(final int deviceID){
+        new Thread(){
+            public void run(){
+                Socket socket;
+                ObjectOutputStream objectOutputStream;
+                ObjectInputStream objectInputStream;
+                List<String> deviceInfo;
+                try{
+                    socket=new Socket(serverIP,serverPort);
+                    objectInputStream=new ObjectInputStream(new BufferedInputStream(socket.getInputStream()));
+                    objectOutputStream=new ObjectOutputStream(socket.getOutputStream());
 
+                    Cmd cmd=new Cmd(Cmd.GET_DEVICEINFO,deviceID,"getDeviceInfo");
+                    objectOutputStream.writeObject(cmd);
+                    objectOutputStream.writeObject(null);
+                    objectOutputStream.flush();
+                    deviceInfo=(List<String>)objectInputStream.readObject();
+                    mMainHandler.obtainMessage(Cmd.GET_DEVICEINFO,deviceInfo).sendToTarget();
+                    objectInputStream.close();
+                    objectOutputStream.close();
+                    socket.close();
+                }catch (Exception e){
+                    e.printStackTrace();
+                }finally {
+                    progressDialog.dismiss();
+                }
+            }
+        }.start();
+    }
 
+    private void getInterfaces(final int deviceID){
+        new Thread(){
+            public void run(){
+                Socket socket;
+                ObjectInputStream objectInputStream;
+                ObjectOutputStream objectOutputStream;
+                List<DeviceInterface> deviceInterfaces;
+                try{
+                    socket=new Socket(serverIP,serverPort);
+                    objectInputStream=new ObjectInputStream(new BufferedInputStream(socket.getInputStream()));
+                    objectOutputStream=new ObjectOutputStream(socket.getOutputStream());
+
+                    Cmd cmd=new Cmd(Cmd.GET_DEVICEINTERFACES,deviceID,"getDeviceInterfaces");
+                    objectOutputStream.writeObject(cmd);
+                    objectOutputStream.writeObject(null);
+                    objectOutputStream.flush();
+                    deviceInterfaces=(List<DeviceInterface>)objectInputStream.readObject();
+                    mMainHandler.obtainMessage(Cmd.GET_DEVICEINTERFACES,deviceInterfaces).sendToTarget();
+                    objectInputStream.close();
+                    objectOutputStream.close();
+                    socket.close();
+                }catch (Exception e){
+                    e.printStackTrace();
+                }finally {
+                    progressDialog.dismiss();
+                }
+            }
+        }.start();
     }
 
     private void getCommRooms(final int subID){
@@ -170,6 +263,7 @@ public class DeviceActivity extends Activity {
 
                     objectOutputStream.writeObject(cmd);
                     objectOutputStream.writeObject(null);
+                    objectOutputStream.flush();
                     commRooms=(List<CommRoom>)objectInputStream.readObject();
                     mMainHandler.obtainMessage(Cmd.GET_COMMROOMS,commRooms).sendToTarget();
                     objectInputStream.close();
@@ -177,6 +271,8 @@ public class DeviceActivity extends Activity {
                     socket.close();
                 }catch (Exception e){
                     e.printStackTrace();
+                }finally {
+                    progressDialog.dismiss();
                 }
             }
 
@@ -199,6 +295,7 @@ public class DeviceActivity extends Activity {
 
                     objectOutputStream.writeObject(cmd);
                     objectOutputStream.writeObject(null);
+                    objectOutputStream.flush();
                     wanDevices=(List<WanDevice>)objectInputStream.readObject();
 
                     mMainHandler.obtainMessage(Cmd.GET_DEVICES,wanDevices).sendToTarget();
@@ -231,6 +328,7 @@ public class DeviceActivity extends Activity {
 
                    objectOutputStream.writeObject(cmd);
                    objectOutputStream.writeObject(null);
+                   objectOutputStream.flush();
                    subStations=(List<SubStation>)objectInputStream.readObject();
 
                    mMainHandler.obtainMessage(Cmd.GET_SUBSTATIONS,subStations).sendToTarget();
@@ -259,8 +357,12 @@ public class DeviceActivity extends Activity {
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
-        if (id == R.id.action_settings) {
-            return true;
+        switch (id){
+            case android.R.id.home:
+                this.finish();
+                break;
+            case R.id.action_settings:
+                break;
         }
         return super.onOptionsItemSelected(item);
     }
