@@ -23,6 +23,6 @@ public class WanDevice implements Serializable{
     public WanDevice(){}
 
     public String toString(){
-        return deviceName+deviceIP;
+        return deviceName+"-"+deviceIP;
     }
 }

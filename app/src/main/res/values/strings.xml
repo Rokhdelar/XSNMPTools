@@ -17,5 +17,9 @@
     <string name="tip_for_interface">请选择您要查看的接口：</string>
     <string name="tip_for_deviceinfo">您选择的设备SNMP实时信息如下：</string>
     <string name="title_activity_device">设备信息</string>
+    <string name="btn_get_device_interfaces">读取当前设备接口</string>
+    <string name="btn_get_interface_info">读取当前接口状态</string>
+    <string name="btn_get_interface_optical_info">读取当前接口光功率</string>
+    <string name="btn_get_interface_traffic">读取当前接口流量</string>
 
 </resources>

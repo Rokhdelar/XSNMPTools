@@ -1,6 +1,7 @@
 package com.x.xsnmp;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.res.Resources;
 import android.graphics.Color;
@@ -28,6 +29,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.List;
 
 
@@ -66,6 +68,26 @@ public class DeviceActivity extends Activity {
                 WanDevice wanDevice=(WanDevice)deviceSpinner.getSelectedItem();
                 progressDialog.show();
                 getInterfaces((wanDevice.deviceID));
+            }
+        });
+
+        btnGetInterfaceInfo.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                progressDialog.show();
+                WanDevice wanDevice=(WanDevice)deviceSpinner.getSelectedItem();
+                DeviceInterface deviceInterface=(DeviceInterface)interSpinner.getSelectedItem();
+                getInterfaceInfo(wanDevice.deviceID,deviceInterface.ifIndex.toInt());
+            }
+        });
+
+        btnGetInterfaceOpticalInfo.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                progressDialog.show();
+                WanDevice wanDevice=(WanDevice)deviceSpinner.getSelectedItem();
+                DeviceInterface deviceInterface=(DeviceInterface)interSpinner.getSelectedItem();
+                getInterfaceOpticalInfo(wanDevice.deviceID, deviceInterface.ifIndex.toInt());
             }
         });
 
@@ -161,8 +183,8 @@ public class DeviceActivity extends Activity {
                         }
 
                         break;
-                    case Cmd.GET_DEVICEINTERFACES:
-                        progressDialog.show();
+                    case Cmd.GET_INTERFACES:
+                        //progressDialog.show();
                         ArrayAdapter<DeviceInterface> deviceInterfaceArrayAdapter=new ArrayAdapter<DeviceInterface>(getApplicationContext(),android.R.layout.simple_spinner_dropdown_item,(List<DeviceInterface>)msg.obj);
                         interSpinner.setAdapter(deviceInterfaceArrayAdapter);
                         interSpinner.setPrompt("请选择要查看的端口");
@@ -181,10 +203,111 @@ public class DeviceActivity extends Activity {
                         });
                         progressDialog.dismiss();
                         break;
+
+                    case Cmd.GET_INTERFACEINFO:
+                        DeviceInterface deviceInterface=(DeviceInterface)msg.obj;
+                        String[] interfaceStrs=new String[8];
+                        interfaceStrs[0]="端口描述：\t"+deviceInterface.ifDescr.toString();
+                        interfaceStrs[1]="管理状态：\t"+((deviceInterface.ifAdminStatus.toInt()==1)?"UP":"DOWN");
+                        interfaceStrs[2]="当前状态：\t"+((deviceInterface.ifOperStatus.toInt()==1)?"UP":"DOWN");
+                        interfaceStrs[3]="状态改变时间：\t"+deviceInterface.ifLastChange.toString();
+                        interfaceStrs[4]="入流量计数：\t"+deviceInterface.ifInOctets.toString();
+                        interfaceStrs[5]="出流量计数：\t"+deviceInterface.ifOutOctets.toString();
+                        interfaceStrs[6]="入丢弃计数：\t"+deviceInterface.ifInDiscards.toString();
+                        interfaceStrs[7]="出丢弃计数：\t"+deviceInterface.ifOutDiscards.toString();
+                        AlertDialog.Builder interfaceInfoDialog=new AlertDialog.Builder(DeviceActivity.this);
+                        interfaceInfoDialog.setTitle("接口信息...");
+                        interfaceInfoDialog.setIcon(R.drawable.ic_chat);
+                        interfaceInfoDialog.setItems(interfaceStrs, null);
+                        interfaceInfoDialog.setNegativeButton(" 关 闭 ",null);
+                        interfaceInfoDialog.show();
+
+                        break;
+                    case Cmd.GET_INTERFACEOPTICALINFO:
+                        List<String> interfaceOpticalInfo=(List<String>)msg.obj;
+                        AlertDialog.Builder interfaceOpticalInfoDialog=new AlertDialog.Builder(DeviceActivity.this);
+                        if(interfaceOpticalInfo.size()==1){
+                            interfaceOpticalInfoDialog.setTitle("光功率测试失败...");
+                            interfaceOpticalInfoDialog.setIcon(android.R.drawable.ic_dialog_alert);
+                            interfaceOpticalInfoDialog.setMessage(interfaceOpticalInfo.toString());
+                            interfaceOpticalInfoDialog.setNegativeButton(" 关 闭 ",null);
+                        }else{
+                            interfaceOpticalInfoDialog.setTitle("接口光功率情况...");
+                            interfaceOpticalInfoDialog.setIcon(R.drawable.ic_chat);
+                            interfaceOpticalInfoDialog.setItems(interfaceOpticalInfo.toArray(new String[interfaceOpticalInfo.size()]),null);
+                            interfaceOpticalInfoDialog.setNegativeButton(" 关 闭 ",null);
+                        }
+                        interfaceOpticalInfoDialog.show();
+                        break;
+
                 }
 
             }
         };
+    }
+
+    private void getInterfaceOpticalInfo(final int deviceID,final int ifIndex){
+        new Thread(){
+            public void run(){
+                Socket socket;
+                ObjectInputStream objectInputStream;
+                ObjectOutputStream objectOutputStream;
+                List<String> interfaceOpticalInfo;
+                try {
+                    socket=new Socket(serverIP,serverPort);
+                    objectInputStream=new ObjectInputStream(new BufferedInputStream(socket.getInputStream()));
+                    objectOutputStream=new ObjectOutputStream(socket.getOutputStream());
+
+                    Cmd cmd=new Cmd(Cmd.GET_INTERFACEOPTICALINFO,deviceID,ifIndex,"getInterfaceInfo");
+                    objectOutputStream.writeObject(cmd);
+                    objectOutputStream.writeObject(null);
+                    objectOutputStream.flush();
+
+                    interfaceOpticalInfo=(List<String>)objectInputStream.readObject();
+                    mMainHandler.obtainMessage(Cmd.GET_INTERFACEOPTICALINFO,interfaceOpticalInfo).sendToTarget();
+
+                    objectInputStream.close();
+                    objectOutputStream.close();
+                    socket.close();
+                }catch (Exception e){
+                    e.printStackTrace();
+                }finally {
+                    progressDialog.dismiss();
+                }
+            }
+        }.start();
+    }
+
+    private void  getInterfaceInfo(final int deviceID, final int ifIndex){
+        new Thread(){
+            public void run(){
+                Socket socket;
+                ObjectInputStream objectInputStream;
+                ObjectOutputStream objectOutputStream;
+                DeviceInterface deviceInterface;
+                try {
+                    socket=new Socket(serverIP,serverPort);
+                    objectInputStream=new ObjectInputStream(new BufferedInputStream(socket.getInputStream()));
+                    objectOutputStream=new ObjectOutputStream(socket.getOutputStream());
+
+                    Cmd cmd=new Cmd(Cmd.GET_INTERFACEINFO,deviceID,ifIndex,"getInterfaceInfo");
+                    objectOutputStream.writeObject(cmd);
+                    objectOutputStream.writeObject(null);
+                    objectOutputStream.flush();
+
+                    deviceInterface=(DeviceInterface)objectInputStream.readObject();
+                    mMainHandler.obtainMessage(Cmd.GET_INTERFACEINFO,deviceInterface).sendToTarget();
+
+                    objectInputStream.close();
+                    objectOutputStream.close();
+                    socket.close();
+                }catch (Exception e){
+                    e.printStackTrace();
+                }finally {
+                    progressDialog.dismiss();
+                }
+            }
+        }.start();
     }
 
     private  void getDeviceInfo(final int deviceID){
@@ -199,7 +322,7 @@ public class DeviceActivity extends Activity {
                     objectInputStream=new ObjectInputStream(new BufferedInputStream(socket.getInputStream()));
                     objectOutputStream=new ObjectOutputStream(socket.getOutputStream());
 
-                    Cmd cmd=new Cmd(Cmd.GET_DEVICEINFO,deviceID,"getDeviceInfo");
+                    Cmd cmd=new Cmd(Cmd.GET_DEVICEINFO,deviceID,-1,"getDeviceInfo");
                     objectOutputStream.writeObject(cmd);
                     objectOutputStream.writeObject(null);
                     objectOutputStream.flush();
@@ -229,12 +352,12 @@ public class DeviceActivity extends Activity {
                     objectInputStream=new ObjectInputStream(new BufferedInputStream(socket.getInputStream()));
                     objectOutputStream=new ObjectOutputStream(socket.getOutputStream());
 
-                    Cmd cmd=new Cmd(Cmd.GET_DEVICEINTERFACES,deviceID,"getDeviceInterfaces");
+                    Cmd cmd=new Cmd(Cmd.GET_INTERFACES,deviceID,-1,"getDeviceInterfaces");
                     objectOutputStream.writeObject(cmd);
                     objectOutputStream.writeObject(null);
                     objectOutputStream.flush();
                     deviceInterfaces=(List<DeviceInterface>)objectInputStream.readObject();
-                    mMainHandler.obtainMessage(Cmd.GET_DEVICEINTERFACES,deviceInterfaces).sendToTarget();
+                    mMainHandler.obtainMessage(Cmd.GET_INTERFACES,deviceInterfaces).sendToTarget();
                     objectInputStream.close();
                     objectOutputStream.close();
                     socket.close();
@@ -259,7 +382,7 @@ public class DeviceActivity extends Activity {
                     objectInputStream=new ObjectInputStream(new BufferedInputStream(socket.getInputStream()));
                     objectOutputStream=new ObjectOutputStream(socket.getOutputStream());
 
-                    Cmd cmd=new Cmd(Cmd.GET_COMMROOMS,subID,"getCommRooms");
+                    Cmd cmd=new Cmd(Cmd.GET_COMMROOMS,subID,-1,"getCommRooms");
 
                     objectOutputStream.writeObject(cmd);
                     objectOutputStream.writeObject(null);
@@ -291,7 +414,7 @@ public class DeviceActivity extends Activity {
                     objectInputStream=new ObjectInputStream(new BufferedInputStream(socket.getInputStream()));
                     objectOutputStream=new ObjectOutputStream(socket.getOutputStream());
 
-                    Cmd cmd=new Cmd(Cmd.GET_DEVICES,commRoomID,"getDevices");
+                    Cmd cmd=new Cmd(Cmd.GET_DEVICES,commRoomID,-1,"getDevices");
 
                     objectOutputStream.writeObject(cmd);
                     objectOutputStream.writeObject(null);
@@ -324,7 +447,7 @@ public class DeviceActivity extends Activity {
                    objectInputStream=new ObjectInputStream(new BufferedInputStream(socket.getInputStream()));
                    objectOutputStream=new ObjectOutputStream(socket.getOutputStream());
 
-                   Cmd cmd=new Cmd(Cmd.GET_SUBSTATIONS,-1,"getSubStation");
+                   Cmd cmd=new Cmd(Cmd.GET_SUBSTATIONS,-1,-1,"getSubStation");
 
                    objectOutputStream.writeObject(cmd);
                    objectOutputStream.writeObject(null);

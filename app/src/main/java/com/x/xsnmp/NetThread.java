@@ -74,7 +74,7 @@ public class NetThread extends Thread
                   case Cmd.GET_DEVICEINFO://getDeviceInfo,msg.arg1是deviceID；
                       getDeviceInfo(msg.arg1);
                       break;
-                  case Cmd.GET_DEVICEINTERFACES: //getDeviceInterfaces,arg1是DeviceID；
+                  case Cmd.GET_INTERFACES: //getDeviceInterfaces,arg1是DeviceID；
                       getDeviceInterfaces(msg.arg1);
 
               }
@@ -85,7 +85,7 @@ public class NetThread extends Thread
 
     private void getDeviceInterfaces(int deviceID) {
         List<DeviceInterface> deviceInterfaces=new ArrayList<DeviceInterface>();
-        Cmd cmd=new Cmd(Cmd.GET_DEVICEINTERFACES,deviceID,"getDeviceInterfaces");
+        Cmd cmd=new Cmd(Cmd.GET_INTERFACES,deviceID,-1,"getDeviceInterfaces");
         try{
             objectOutputStream.writeObject(cmd);
             objectOutputStream.flush();
@@ -97,12 +97,12 @@ public class NetThread extends Thread
         }catch (IOException e){
             e.printStackTrace();
         }
-        mMainHandler.obtainMessage(Cmd.GET_DEVICEINTERFACES,deviceInterfaces).sendToTarget();
+        mMainHandler.obtainMessage(Cmd.GET_INTERFACES,deviceInterfaces).sendToTarget();
     }
 
     private void getDeviceInfo(int deviceID) {
         String deviceInfo=new String();
-        Cmd cmd=new Cmd(Cmd.GET_DEVICEINFO,deviceID,"getDeviceInfo");
+        Cmd cmd=new Cmd(Cmd.GET_DEVICEINFO,deviceID,-1,"getDeviceInfo");
         try{
             objectOutputStream.writeObject(cmd);
             objectOutputStream.flush();
@@ -122,7 +122,7 @@ public class NetThread extends Thread
         //获取SubStation信息，并发送消息到主线程。
         List<SubStation> subStations=new ArrayList<SubStation>();
 
-        Cmd cmd=new Cmd(Cmd.GET_SUBSTATIONS,-1,"getSubStations");
+        Cmd cmd=new Cmd(Cmd.GET_SUBSTATIONS,-1,-1,"getSubStations");
         try {
             objectOutputStream.writeObject(cmd);
             objectOutputStream.flush();
@@ -143,7 +143,7 @@ public class NetThread extends Thread
     private void getCommRooms(int subID) {
         List<CommRoom> commRooms=new ArrayList<CommRoom>();
 
-        Cmd cmd=new Cmd(Cmd.GET_COMMROOMS,subID,"getCommRooms");
+        Cmd cmd=new Cmd(Cmd.GET_COMMROOMS,subID,-1,"getCommRooms");
         try{
             objectOutputStream.writeObject(cmd);
             objectOutputStream.flush();
@@ -162,7 +162,7 @@ public class NetThread extends Thread
     private void getDevices(int commID) {
         List<WanDevice> wanDevices=new ArrayList<WanDevice>();
 
-        Cmd cmd=new Cmd(Cmd.GET_DEVICES,commID,"getDevices");
+        Cmd cmd=new Cmd(Cmd.GET_DEVICES,commID,-1,"getDevices");
         try{
             objectOutputStream.writeObject(cmd);
             objectOutputStream.flush();
